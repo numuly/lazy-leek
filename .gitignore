@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Data & runtime output (don't commit live data)
+data/pools/
+data/history.json
+data/score_history.json
+output/
+
+# OS
+.DS_Store
+*.swp
