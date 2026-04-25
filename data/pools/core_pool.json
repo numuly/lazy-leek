@@ -1,0 +1,122 @@
+[
+  {
+    "symbol": "sh601328",
+    "name": "交通银行",
+    "sector": "银行",
+    "parent_sector": "银行"
+  },
+  {
+    "symbol": "sh600015",
+    "name": "华夏银行",
+    "sector": "银行",
+    "parent_sector": "银行"
+  },
+  {
+    "symbol": "sz000001",
+    "name": "平安银行",
+    "sector": "银行",
+    "parent_sector": "银行"
+  },
+  {
+    "symbol": "sh601668",
+    "name": "中国建筑",
+    "sector": "基建",
+    "parent_sector": "基建"
+  },
+  {
+    "symbol": "sh600048",
+    "name": "保利发展",
+    "sector": "地产",
+    "parent_sector": "地产"
+  },
+  {
+    "symbol": "sz000002",
+    "name": "万科A",
+    "sector": "地产",
+    "parent_sector": "地产"
+  },
+  {
+    "symbol": "sz002415",
+    "name": "海康威视",
+    "sector": "科技",
+    "parent_sector": "科技"
+  },
+  {
+    "symbol": "sh600584",
+    "name": "长电科技",
+    "sector": "半导体",
+    "parent_sector": "科技"
+  },
+  {
+    "symbol": "sh601012",
+    "name": "隆基绿能",
+    "sector": "光伏",
+    "parent_sector": "能源"
+  },
+  {
+    "symbol": "sz300274",
+    "name": "阳光电源",
+    "sector": "光伏",
+    "parent_sector": "能源"
+  },
+  {
+    "symbol": "sh600031",
+    "name": "三一重工",
+    "sector": "机械",
+    "parent_sector": "制造"
+  },
+  {
+    "symbol": "sh600276",
+    "name": "恒瑞医药",
+    "sector": "医药",
+    "parent_sector": "医药"
+  },
+  {
+    "symbol": "sz300760",
+    "name": "迈瑞医疗",
+    "sector": "医疗器械",
+    "parent_sector": "医药"
+  },
+  {
+    "symbol": "sz000858",
+    "name": "五粮液",
+    "sector": "白酒",
+    "parent_sector": "消费"
+  },
+  {
+    "symbol": "sh600887",
+    "name": "伊利股份",
+    "sector": "食品",
+    "parent_sector": "消费"
+  },
+  {
+    "symbol": "sh600585",
+    "name": "海螺水泥",
+    "sector": "水泥",
+    "parent_sector": "材料"
+  },
+  {
+    "symbol": "sh600019",
+    "name": "宝钢股份",
+    "sector": "钢铁",
+    "parent_sector": "材料"
+  },
+  {
+    "symbol": "sh600028",
+    "name": "中国石化",
+    "sector": "石化",
+    "parent_sector": "能源"
+  },
+  {
+    "symbol": "sh600547",
+    "name": "山东黄金",
+    "sector": "黄金",
+    "parent_sector": "材料"
+  },
+  {
+    "symbol": "sz000661",
+    "name": "长春高新",
+    "sector": "生物制药",
+    "parent_sector": "医药"
+  }
+]

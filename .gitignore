@@ -4,11 +4,15 @@ __pycache__/
 *.egg-info/
 .eggs/
 
-# Data & runtime output (don't commit live data)
-data/pools/
-data/history.json
+# Data & runtime output
+# score_history.json is always runtime-only — never commit
 data/score_history.json
+data/history.json
 output/
+
+# pools/ contains seed data — commit it
+# (Only core_pool.json and radar_pool.json are seed; score_history.json grows at runtime)
+data/pools/score_history.json
 
 # OS
 .DS_Store

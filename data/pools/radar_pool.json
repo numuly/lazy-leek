@@ -1,0 +1,86 @@
+[
+  {
+    "symbol": "sh601658",
+    "name": "邮储银行",
+    "sector": "银行",
+    "parent_sector": "银行"
+  },
+  {
+    "symbol": "sh601998",
+    "name": "中信银行",
+    "sector": "银行",
+    "parent_sector": "银行"
+  },
+  {
+    "symbol": "sh601166",
+    "name": "兴业银行",
+    "sector": "银行",
+    "parent_sector": "银行"
+  },
+  {
+    "symbol": "sh600000",
+    "name": "浦发银行",
+    "sector": "银行",
+    "parent_sector": "银行"
+  },
+  {
+    "symbol": "sh601077",
+    "name": "渝农商行",
+    "sector": "银行",
+    "parent_sector": "银行"
+  },
+  {
+    "symbol": "sh601825",
+    "name": "沪农商行",
+    "sector": "银行",
+    "parent_sector": "银行"
+  },
+  {
+    "symbol": "sh601186",
+    "name": "中国铁建",
+    "sector": "基建",
+    "parent_sector": "基建"
+  },
+  {
+    "symbol": "sh601669",
+    "name": "中国电建",
+    "sector": "基建",
+    "parent_sector": "基建"
+  },
+  {
+    "symbol": "sh600325",
+    "name": "华发股份",
+    "sector": "地产",
+    "parent_sector": "地产"
+  },
+  {
+    "symbol": "sh601117",
+    "name": "中国化学",
+    "sector": "化工",
+    "parent_sector": "材料"
+  },
+  {
+    "symbol": "sh600522",
+    "name": "中天科技",
+    "sector": "通信",
+    "parent_sector": "科技"
+  },
+  {
+    "symbol": "sz002839",
+    "name": "张家港行",
+    "sector": "银行",
+    "parent_sector": "银行"
+  },
+  {
+    "symbol": "sh600570",
+    "name": "恒生电子",
+    "sector": "软件",
+    "parent_sector": "科技"
+  },
+  {
+    "symbol": "sh600406",
+    "name": "国电南瑞",
+    "sector": "电气",
+    "parent_sector": "制造"
+  }
+]
