@@ -15,15 +15,25 @@
 ## 一分钟跑起来
 
 ```bash
-# 日常筛选 Top 10
+# 日常筛选 Top 10（默认 12 个月周期）
 python3 stock_screen.py
 
-# 自定义数量，不写历史文件
+# 拉长到 5 年找更深的地窖
+python3 stock_screen.py --months 60
+
+# 自定义数量，不写历史
 python3 stock_screen.py --top 20 --no-history
 
 # 每周全市场大扫除（淘汰+补入+晋升）
 python3 stock_screen.py --maintain
 ```
+
+| 参数 | 默认 | 说明 |
+|------|------|------|
+| `--top N` | 10 | 输出 Top N |
+| `--months N` | 12 | 评测周期 1~120 月 | 建议: 短线 1~6 / 中长线 12~36 / 超长线 60~120 |
+| `--no-history` | — | 跳过 history.json 写入 |
+| `--maintain` | — | 全市场扫描 + 淘汰 + 补入 + 晋升 |
 
 ## 免责声明
 
@@ -31,4 +41,4 @@ python3 stock_screen.py --maintain
 
 ---
 
-> 详细技术文档 → [运维手册.md](./运维手册.md)
+> 完整技术文档 → [运维手册.md](./运维手册.md)

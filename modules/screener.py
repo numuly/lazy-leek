@@ -86,17 +86,20 @@ def value_score(pb: Optional[float], pe: Optional[float]) -> float:
 
 def tech_score(
     drawdown_from_high: float,
-    amplitude_12m: float,
+    amplitude: float,
     ma_divergence: float,
+    months: int = 12,
 ) -> float:
     """
     技术分重构：寻找超跌、底部横盘、均线粘合的股票（满分10分）
 
     - drawdown_from_high: 较历史高点回撤幅度（负数，如 -50.0 表示跌了50%）
-    - amplitude_12m:      近12个月的价格振幅（(最高-最低)/最低，百分比）
+    - amplitude:          近N个月的价格振幅（(最高-最低)/最低，百分比）
     - ma_divergence:      月均线发散程度（max(MA)/min(MA)-1，越小越粘合）
+    - months:             评测周期（月），振幅阈值按 sqrt(months/12) 自适应缩放
     """
     score = 0.0
+    scale = max(0.2, (months / 12) ** 0.5)
 
     # 1. 深度回撤（寻找"被洗盘/挤泡沫"的标的）— 权重 4 分
     if drawdown_from_high < -50.0:
@@ -108,14 +111,14 @@ def tech_score(
     elif drawdown_from_high < -20.0:
         score += 1.0
 
-    # 2. 长期底部横盘（近12个月振幅极小）— 权重 3 分
-    if amplitude_12m <= 0 or amplitude_12m > 500:
+    # 2. 长期底部横盘（近N个月振幅极小）— 权重 3 分，阈值按周期缩放
+    if amplitude <= 0 or amplitude > 500:
         pass  # 数据异常，不加分
-    elif amplitude_12m < 20.0:
+    elif amplitude < 20.0 * scale:
         score += 3.0
-    elif amplitude_12m >= 20.0 and amplitude_12m < 35.0:
+    elif amplitude < 35.0 * scale:
         score += 2.0
-    elif amplitude_12m >= 35.0 and amplitude_12m < 50.0:
+    elif amplitude < 50.0 * scale:
         score += 1.0
 
     # 3. 均线粘合度（MA5/MA10/MA20 距离极近，准备变盘）— 权重 3 分
@@ -133,9 +136,10 @@ def tech_score(
 # 单只股票分析
 # ─────────────────────────────────────────
 
-def analyze_stock(symbol: str, name: str) -> Optional[Dict[str, Any]]:
+def analyze_stock(symbol: str, name: str, months: int = 12) -> Optional[Dict[str, Any]]:
     """
     对单只股票进行完整分析，返回新评分体系下的指标
+    months: 评测周期（月），控制振幅窗口和涨跌幅计算
     """
     quote = get_tx_quote(symbol)
     if not quote or not quote.get('price'):
@@ -165,18 +169,18 @@ def analyze_stock(symbol: str, name: str) -> Optional[Dict[str, Any]]:
                 return lo, hi
             return hi, lo
 
-        lows_12m_raw  = [(sf_kline(k[4]), sf_kline(k[3])) for k in monthly[:12]]
-        lows_12m  = []
-        highs_12m = []
-        for lo, hi in lows_12m_raw:
+        lows_Nm_raw  = [(sf_kline(k[4]), sf_kline(k[3])) for k in monthly[:months]]
+        highs_Nm = []
+        lows_Nm  = []
+        for lo, hi in lows_Nm_raw:
             v_hi, v_lo = _valid_high_low(hi, lo)
             if v_lo is not None:
-                lows_12m.append(v_lo)
+                lows_Nm.append(v_lo)
             if v_hi is not None:
-                highs_12m.append(v_hi)
+                highs_Nm.append(v_hi)
 
         if len(closes_all) < 20:
-            return _insufficient_data(symbol, name, quote)
+            return _insufficient_data(symbol, name, quote, months)
 
         # 均线计算（MA5 / MA10 / MA20）
         closes_5  = closes_all[:5]
@@ -195,30 +199,30 @@ def analyze_stock(symbol: str, name: str) -> Optional[Dict[str, Any]]:
         period_high = max(highs_all[:60]) if len(highs_all) >= 60 else max(highs_all)
         drawdown_from_high = (price - period_high) / period_high * 100 if period_high else 0.0
 
-        # 近12个月振幅
-        if lows_12m and highs_12m:
-            lowest_12m  = min(lows_12m)
-            highest_12m = max(highs_12m)
-            if lowest_12m > 0 and highest_12m >= lowest_12m:
-                amplitude_12m = (highest_12m - lowest_12m) / lowest_12m * 100
+        # 近N个月振幅
+        if lows_Nm and highs_Nm:
+            lowest_Nm  = min(lows_Nm)
+            highest_Nm = max(highs_Nm)
+            if lowest_Nm > 0 and highest_Nm >= lowest_Nm:
+                amplitude = (highest_Nm - lowest_Nm) / lowest_Nm * 100
             else:
-                amplitude_12m = 999.0
+                amplitude = 999.0
         else:
-            amplitude_12m = 999.0
+            amplitude = 999.0
 
-        # 额外：12个月初始价格（用于计算12个月涨跌幅）
-        if len(closes_all) >= 12:
-            close_12m_ago = closes_all[11]
+        # 额外：N个月前价格（用于计算N个月涨跌幅）
+        if len(closes_all) > months:
+            close_Nm_ago = closes_all[months]
         else:
-            close_12m_ago = closes_all[-1]
-        chg_12m = (price - close_12m_ago) / close_12m_ago * 100 if close_12m_ago else 0.0
+            close_Nm_ago = closes_all[-1]
+        chg_Nm = (price - close_Nm_ago) / close_Nm_ago * 100 if close_Nm_ago else 0.0
 
     else:
-        return _insufficient_data(symbol, name, quote)
+        return _insufficient_data(symbol, name, quote, months)
 
     # ── 评分 ──
     v_sc  = value_score(pb, pe)
-    t_sc  = tech_score(drawdown_from_high, amplitude_12m, ma_divergence)
+    t_sc  = tech_score(drawdown_from_high, amplitude, ma_divergence, months)
     total = v_sc * 0.6 + t_sc * 0.4
 
     return {
@@ -231,14 +235,15 @@ def analyze_stock(symbol: str, name: str) -> Optional[Dict[str, Any]]:
         'pb':         pb,
         'pe':         pe,
         'mktcap':     quote.get('mktcap', 0),
-        # 新增技术指标
-        'drawdown':   round(drawdown_from_high, 2),   # 较历史高点回撤%
-        'amplitude':  round(amplitude_12m, 2),         # 近12月振幅%
-        'ma_div':     round(ma_divergence, 4),          # 均线粘合度
+        # 技术指标
+        'drawdown':   round(drawdown_from_high, 2),
+        'amplitude':  round(amplitude, 2),
+        'ma_div':     round(ma_divergence, 4),
         'ma5':        round(ma5, 2),
         'ma10':       round(ma10, 2),
         'ma20':       round(ma20, 2),
-        'chg_12m':    round(chg_12m, 2),
+        'chg_Nm':     round(chg_Nm, 2),
+        'months':     months,
         # 评分
         'value_score': round(v_sc, 2),
         'tech_score':  round(t_sc, 2),
@@ -247,7 +252,7 @@ def analyze_stock(symbol: str, name: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def _insufficient_data(symbol: str, name: str, quote: dict) -> dict:
+def _insufficient_data(symbol: str, name: str, quote: dict, months: int = 12) -> dict:
     """数据不足时返回默认值，避免崩溃"""
     return {
         'symbol': symbol, 'name': name or quote.get('name', ''),
@@ -258,7 +263,7 @@ def _insufficient_data(symbol: str, name: str, quote: dict) -> dict:
         'pb': quote.get('pb'), 'pe': quote.get('pe'),
         'mktcap': quote.get('mktcap', 0),
         'drawdown': 0.0, 'amplitude': 999.0, 'ma_div': 999.0,
-        'ma5': 0, 'ma10': 0, 'ma20': 0, 'chg_12m': 0.0,
+        'ma5': 0, 'ma10': 0, 'ma20': 0, 'chg_Nm': 0.0, 'months': months,
         'value_score': 0.0, 'tech_score': 0.0,
         'total_score': 0.0, 'monthly_cnt': 0,
     }
@@ -274,9 +279,11 @@ def run_screener(
     min_pb: float = 0.0,
     max_pb: float = 99.0,
     max_pe: float = 99.0,
+    months: int = 12,
 ) -> List[Dict[str, Any]]:
     """
     运行筛选器
+    months: 评测周期（月），1~120，控制振幅窗口和涨跌幅计算
     """
     if watchlist is None:
         if _DEFAULT_WATCHLIST is not None:
@@ -291,7 +298,7 @@ def run_screener(
             continue
         seen.add(sym)
         try:
-            r = analyze_stock(sym, name)
+            r = analyze_stock(sym, name, months)
             if not r:
                 print(f"  ⚠ {sym} 获取数据失败")
                 continue
@@ -308,7 +315,7 @@ def run_screener(
                   f"价值={r['value_score']:.1f} "
                   f"技术={r['tech_score']:.1f} "
                   f"回撤={r['drawdown']:.0f}% "
-                  f"振幅={r['amplitude']:.0f}% "
+                  f"振幅({months}月)={r['amplitude']:.0f}% "
                   f"粘合={r['ma_div']:.2f} "
                   f"综合={r['total_score']:.1f}")
         except Exception as e:
@@ -340,11 +347,13 @@ def get_signal_tag(r: Dict[str, Any]) -> List[str]:
     elif dd < -35:
         tags.append('📉深度回调')
 
-    # 振幅信号（横盘）
+    # 振幅信号（横盘），阈值与 tech_score 同步缩放
     amp = r.get('amplitude', 999)
-    if amp < 20:
+    m = r.get('months', 12)
+    scale = max(0.2, (m / 12) ** 0.5)
+    if amp < 20.0 * scale:
         tags.append('📊窄幅横盘')
-    elif amp < 35:
+    elif amp < 35.0 * scale:
         tags.append('📐轻度波动')
 
     # 均线粘合信号
@@ -354,12 +363,10 @@ def get_signal_tag(r: Dict[str, Any]) -> List[str]:
     elif div < 0.10:
         tags.append('🔗均线初步粘合')
 
-    # 12个月趋势
-    chg = r.get('chg_12m', 0)
-    if chg > 0:
-        tags.append('📈近12月上涨')
-    else:
-        tags.append('📉近12月下跌')
+    # N个月趋势
+    chg = r.get('chg_Nm', 0)
+    label = f'近{m}月上涨' if chg > 0 else f'近{m}月下跌'
+    tags.append('📈' + label if chg > 0 else '📉' + label)
 
     return tags
 

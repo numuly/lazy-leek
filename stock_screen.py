@@ -32,13 +32,13 @@ def daily_run(args):
     print("=" * 60)
 
     print("\n[1/2] 运行筛选器...")
-    results = run_screener(top_n=args.top)
+    results = run_screener(top_n=args.top, months=args.months)
     print(f"  → 筛选出 {len(results)} 只股票")
     record_scores(results)
     clean_stale_history()
 
     print("\n[2/2] 生成报告...")
-    paths = generate_report(results, skip_history=args.no_history)
+    paths = generate_report(results, skip_history=args.no_history, months=args.months)
     print(f"  → JSON: {paths['json_path']}")
     print(f"  → Markdown: {paths['md_path']}")
 
@@ -67,7 +67,7 @@ def maintain_pools(args):
             known[s['symbol']] = (s['name'], s.get('sector', '其他'))
 
     watchlist = [(sym, *known.get(sym, ('', '其他'))) for sym in symbols]
-    candidates = run_screener(watchlist=watchlist, top_n=30)
+    candidates = run_screener(watchlist=watchlist, top_n=30, months=args.months)
 
     # 2. 剔除无数据的股票
     valid_candidates = [c for c in candidates if c.get('total_score', 0) > 0]
@@ -86,7 +86,7 @@ def maintain_pools(args):
 
     # 3. 执行维护周期（淘汰 + 补入 + 晋升）
     print("\n[2/3] 执行维护周期...")
-    result = run_cleanup_cycle(candidates=valid_candidates)
+    result = run_cleanup_cycle(candidates=valid_candidates, months=args.months)
 
     for action, symbols in result.items():
         if symbols:
@@ -115,6 +115,8 @@ def maintain_pools(args):
 def main():
     parser = argparse.ArgumentParser(description='A股低估值筛选系统')
     parser.add_argument('--top', type=int, default=10, help='返回 Top N（默认10）')
+    parser.add_argument('--months', type=int, default=12, choices=range(1, 121),
+                        help='评测周期（月），1~120，默认12。控制振幅窗口和涨跌幅计算')
     parser.add_argument('--no-history', action='store_true', help='跳过历史记录')
     parser.add_argument('--maintain', action='store_true', help='周度池维护模式（扫描全市场+淘汰+补入+晋升）')
     args = parser.parse_args()

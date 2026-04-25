@@ -31,10 +31,11 @@ def generate_report(
     results: List[Dict[str, Any]],
     output_dir: str = OUTPUT_DIR,
     skip_history: bool = False,
+    months: int = 12,
 ) -> Dict[str, str]:
     """
     生成完整报告（JSON + Markdown）
-    返回: {json_path, md_path, chart_paths}
+    返回: {json_path, md_path}
     """
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -77,7 +78,7 @@ def generate_report(
 
     # ── 3. Markdown 可读报告 ──
     md_path = os.path.join(output_dir, f"{filename_prefix}_report.md")
-    _render_markdown(md_path, results, time_str)
+    _render_markdown(md_path, results, time_str, months)
 
     return {
         'json_path': json_path,
@@ -98,8 +99,9 @@ def _cleanup_old_reports(output_dir: str, keep_days: int = 30):
                 pass
 
 
-def _render_markdown(path: str, results: List[Dict[str, Any]], time_str: str):
+def _render_markdown(path: str, results: List[Dict[str, Any]], time_str: str, months: int = 12):
     """渲染 Markdown 报告"""
+    m = months
     with open(path, 'w', encoding='utf-8') as f:
         f.write(f"# 📊 A股低估值精选报告\n\n")
         f.write(f"> 生成时间：{time_str}\n\n")
@@ -123,7 +125,7 @@ def _render_markdown(path: str, results: List[Dict[str, Any]], time_str: str):
 
         # Top 10 表格
         f.write(f"## 🏆 低估值 Top {len(results)}\n\n")
-        f.write("| 排名 | 代码 | 名称 | 现价 | PB | PE | 回撤 | 振幅 | 粘合度 | 综合分 | 信号 |\n")
+        f.write(f"| 排名 | 代码 | 名称 | 现价 | PB | PE | 回撤 | {m}月振幅 | 粘合度 | 综合分 | 信号 |\n")
         f.write("|------|------|------|------|----|----|------|------|--------|--------|------|\n")
         for i, r in enumerate(results, 1):
             tags = ' '.join(get_signal_tag(r))
@@ -143,9 +145,9 @@ def _render_markdown(path: str, results: List[Dict[str, Any]], time_str: str):
             f.write(f"- **市值**: {r.get('mktcap', 0):.0f}亿元\n")
             f.write(f"- **MA5**: {r.get('ma5', 0):.2f}  |  **MA10**: {r.get('ma10', 0):.2f}  |  **MA20**: {r.get('ma20', 0):.2f}\n")
             f.write(f"- **较历史高点回撤**: {r.get('drawdown', 0):+.1f}%\n")
-            f.write(f"- **近12月振幅**: {r.get('amplitude', 0):+.1f}%\n")
+            f.write(f"- **近{m}月振幅**: {r.get('amplitude', 0):+.1f}%\n")
             f.write(f"- **均线粘合度**: {r.get('ma_div', 0):.2%}\n")
-            f.write(f"- **近12月涨跌**: {r.get('chg_12m', 0):+.1f}%\n")
+            f.write(f"- **近{m}月涨跌**: {r.get('chg_Nm', 0):+.1f}%\n")
             f.write(f"- **价值分**: {r['value_score']:.1f}  |  **技术分**: {r['tech_score']:.1f}  |  **综合分**: {r['total_score']:.1f}\n")
             tags = ' '.join(get_signal_tag(r))
             f.write(f"- **信号**: {tags}\n\n")

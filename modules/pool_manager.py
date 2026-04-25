@@ -129,6 +129,7 @@ def record_scores(results: List[Dict[str, Any]]):
             'drawdown':   r.get('drawdown', 0),
             'amplitude':  r.get('amplitude', 999),
             'ma_div':     r.get('ma_div', 999),
+            'months':     r.get('months', 12),
         }
         if sym not in history:
             history[sym] = []
@@ -159,10 +160,10 @@ def clean_stale_history():
     return len(stale)
 
 
-def get_bottom_stagnant(symbols: List[str], lookback_days: int = 90) -> List[str]:
+def get_bottom_stagnant(symbols: List[str], lookback_days: int = 90, months: int = 12) -> List[str]:
     """
     淘汰条件A：连续 30 天(记录日) total_score < 5.0 → 淘汰
-    在 lookback_days 窗口内，检查最长连续低于阈值的记录数
+    在 lookback_days 窗口内，检查与当前 months 同配置的最长连续低分记录
     """
     history = load_score_history()
     cutoff = datetime.now().timestamp() - lookback_days * 24 * 3600
@@ -175,7 +176,8 @@ def get_bottom_stagnant(symbols: List[str], lookback_days: int = 90) -> List[str
 
         recent = sorted(
             [e for e in entries
-             if datetime.strptime(e['date'], '%Y%m%d').timestamp() > cutoff],
+             if datetime.strptime(e['date'], '%Y%m%d').timestamp() > cutoff
+             and e.get('months', 12) == months],
             key=lambda e: e['date']
         )
 
@@ -197,10 +199,11 @@ def get_bottom_stagnant(symbols: List[str], lookback_days: int = 90) -> List[str
     return stagnant
 
 
-def get_broken_out(symbols: List[str], drawup_threshold: float = -10.0) -> List[str]:
+def get_broken_out(symbols: List[str], drawup_threshold: float = -10.0, months: int = 12) -> List[str]:
     """
     淘汰条件B：股票已涨离底部（回撤收窄到阈值以内），不再属于"超跌横盘"形态
     返回应移入 Radar 的 symbol 列表
+    只统计与当前 months 同配置的条目
     """
     history = load_score_history()
 
@@ -209,7 +212,8 @@ def get_broken_out(symbols: List[str], drawup_threshold: float = -10.0) -> List[
         entries = history.get(sym, [])
         if not entries:
             continue
-        recent = entries[-5:] if len(entries) >= 5 else entries
+        same_period = [e for e in entries if e.get('months', 12) == months]
+        recent = same_period[-5:] if len(same_period) >= 5 else same_period
         if not recent:
             continue
         if all(e.get('drawdown', -999.0) > drawup_threshold for e in recent):
@@ -332,6 +336,7 @@ def run_cleanup_cycle(
     max_core: int = 20,
     drawup_threshold: float = -10.0,
     candidates: List[Dict[str, Any]] = None,
+    months: int = 12,
 ) -> Dict[str, List[str]]:
     """
     执行完整维护周期（每周调用一次）
@@ -339,6 +344,7 @@ def run_cleanup_cycle(
     - 补入：从全市场扫描结果取 top N 补入 Radar
     - 晋升：高分 Radar 晋升 Core
     candidates: 全市场扫描结果（不传则只做淘汰）
+    months: 与当前 --months 保持一致，避免不同评测周期的评分交叉污染
     返回 {action: [symbols]}
     """
     core_pool = load_pool('core')
@@ -355,7 +361,7 @@ def run_cleanup_cycle(
     }
 
     # 1. 已脱离底部的 Core 成员 → 降入 Radar
-    broken = get_broken_out(core_symbols, drawup_threshold)
+    broken = get_broken_out(core_symbols, drawup_threshold, months)
     if broken:
         result['demote_to_radar'].extend(broken)
         demoted = [s for s in core_pool if s['symbol'] in broken]
@@ -371,7 +377,7 @@ def run_cleanup_cycle(
 
     # 2. 长期底部震荡的 Radar 成员 → 淘汰
     radar_symbols = [s['symbol'] for s in radar_pool]
-    stagnant_radar = get_bottom_stagnant(radar_symbols)
+    stagnant_radar = get_bottom_stagnant(radar_symbols, months=months)
     if stagnant_radar:
         result['remove_completely'].extend(stagnant_radar)
         radar_pool = [s for s in radar_pool if s['symbol'] not in stagnant_radar]
