@@ -7,7 +7,7 @@ Core (<20) / Radar (<50) / Inlet (动态补充)
 import os
 import json
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 # ─────────────────────────────────────────
 # 路径配置

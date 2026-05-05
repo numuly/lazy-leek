@@ -82,5 +82,35 @@
     "name": "国电南瑞",
     "sector": "电气",
     "parent_sector": "制造"
+  },
+  {
+    "symbol": "sh600016",
+    "name": "民生银行",
+    "sector": "其他",
+    "parent_sector": "其他"
+  },
+  {
+    "symbol": "sh601390",
+    "name": "中国中铁",
+    "sector": "其他",
+    "parent_sector": "其他"
+  },
+  {
+    "symbol": "sh601800",
+    "name": "中国交建",
+    "sector": "其他",
+    "parent_sector": "其他"
+  },
+  {
+    "symbol": "sh601169",
+    "name": "北京银行",
+    "sector": "其他",
+    "parent_sector": "其他"
+  },
+  {
+    "symbol": "sh600036",
+    "name": "招商银行",
+    "sector": "其他",
+    "parent_sector": "其他"
   }
 ]

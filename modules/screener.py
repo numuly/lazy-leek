@@ -54,15 +54,14 @@ except ImportError:
 
 def value_score(pb: Optional[float], pe: Optional[float]) -> float:
     """
-    价值分：PB权重60%，PE权重40%
+    价值分：盈利股 PB×60% + PE×40%，亏损股只看 PB
     PB越低越好（0.3以下最优），PE越低越好（5以下最优）
     分数范围 0~10
     """
-    if pb is None or pe is None or pe <= 0:
-        return 0.0
-
     # PB 评分：0.3以下满分10，0.7以上开始衰减，1.0以上0分
-    if pb <= 0.3:
+    if pb is None:
+        pb_sc = 0.0
+    elif pb <= 0.3:
         pb_sc = 10.0
     elif pb <= 0.7:
         pb_sc = max(0, 10 - (pb - 0.3) * 25)  # 0.3→0.7 线性 10→0
@@ -70,6 +69,10 @@ def value_score(pb: Optional[float], pe: Optional[float]) -> float:
         pb_sc = max(0, 5 - (pb - 0.7) * 10)   # 0.7→1.0 线性 5→0
     else:
         pb_sc = 0.0
+
+    # 亏损股或数据缺失 → 只看 PB
+    if pe is None or pe <= 0:
+        return pb_sc
 
     # PE 评分：5以下满分10，20以上开始衰减，50以上0分
     if pe <= 5:

@@ -29,14 +29,20 @@ DATA_DIR     = os.path.join(PROJECT_ROOT, 'data')
 
 def generate_report(
     results: List[Dict[str, Any]],
+    top_n: int = 10,
+    core_symbols: set = None,
     output_dir: str = OUTPUT_DIR,
     skip_history: bool = False,
     months: int = 12,
 ) -> Dict[str, str]:
     """
     生成完整报告（JSON + Markdown）
-    返回: {json_path, md_path}
+    results:    全部股票的完整评分列表（已排序）
+    top_n:      主表格显示 Top N
+    core_symbols: Core 池股票 symbol 集合，用于标记池归属
     """
+    if core_symbols is None:
+        core_symbols = set()
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -78,7 +84,7 @@ def generate_report(
 
     # ── 3. Markdown 可读报告 ──
     md_path = os.path.join(output_dir, f"{filename_prefix}_report.md")
-    _render_markdown(md_path, results, time_str, months)
+    _render_markdown(md_path, results, top_n, core_symbols, time_str, months)
 
     return {
         'json_path': json_path,
@@ -99,9 +105,11 @@ def _cleanup_old_reports(output_dir: str, keep_days: int = 30):
                 pass
 
 
-def _render_markdown(path: str, results: List[Dict[str, Any]], time_str: str, months: int = 12):
+def _render_markdown(path: str, results: List[Dict[str, Any]], top_n: int,
+                     core_symbols: set, time_str: str, months: int = 12):
     """渲染 Markdown 报告"""
     m = months
+    core_set = core_symbols or set()
     with open(path, 'w', encoding='utf-8') as f:
         f.write(f"# 📊 A股低估值精选报告\n\n")
         f.write(f"> 生成时间：{time_str}\n\n")
@@ -123,22 +131,24 @@ def _render_markdown(path: str, results: List[Dict[str, Any]], time_str: str, mo
             f.write("- （大盘数据暂不可用）\n")
         f.write("\n")
 
-        # Top 10 表格
-        f.write(f"## 🏆 低估值 Top {len(results)}\n\n")
-        f.write(f"| 排名 | 代码 | 名称 | 现价 | PB | PE | 回撤 | {m}月振幅 | 粘合度 | 综合分 | 信号 |\n")
-        f.write("|------|------|------|------|----|----|------|------|--------|--------|------|\n")
-        for i, r in enumerate(results, 1):
+        # Top N 表格
+        top = results[:top_n]
+        f.write(f"## 🏆 低估值 Top {len(top)}\n\n")
+        f.write(f"| 排名 | 池 | 代码 | 名称 | 现价 | PB | PE | 回撤 | {m}月振幅 | 粘合度 | 综合分 | 信号 |\n")
+        f.write(f"|------|-----|------|------|------|----|----|------|------|--------|--------|------|\n")
+        for i, r in enumerate(top, 1):
             tags = ' '.join(get_signal_tag(r))
             dd   = f"{r.get('drawdown', 0):.0f}%"
             amp  = f"{r.get('amplitude', 0):.0f}%"
             div  = f"{r.get('ma_div', 0):.2f}"
-            f.write(f"| {i} | {r['code']} | {r['name']} | {r.get('price', 0):.2f} | "
+            pool = 'Core' if r['symbol'] in core_set else 'Radar'
+            f.write(f"| {i} | {pool} | {r['code']} | {r['name']} | {r.get('price', 0):.2f} | "
                     f"{r.get('pb') or 0:.2f} | {r.get('pe') or 0:.1f} | {dd} | {amp} | {div} | "
                     f"**{r['total_score']:.1f}** | {tags} |\n")
 
         # Top 3 详情
         f.write("\n## 🔍 Top 3 详细分析\n\n")
-        for i, r in enumerate(results[:3], 1):
+        for i, r in enumerate(top[:3], 1):
             f.write(f"### {i}. {r['name']}（{r['code']}）\n\n")
             f.write(f"- **现价**: {r.get('price', 0):.2f}元\n")
             f.write(f"- **PB**: {r.get('pb') or 0:.2f}  |  **PE**: {r.get('pe') or 0:.1f}\n")
@@ -151,6 +161,17 @@ def _render_markdown(path: str, results: List[Dict[str, Any]], time_str: str, mo
             f.write(f"- **价值分**: {r['value_score']:.1f}  |  **技术分**: {r['tech_score']:.1f}  |  **综合分**: {r['total_score']:.1f}\n")
             tags = ' '.join(get_signal_tag(r))
             f.write(f"- **信号**: {tags}\n\n")
+
+        # 全池跟踪表
+        f.write("## 📋 双池全量跟踪\n\n")
+        f.write(f"| # | 池 | 代码 | 名称 | 现价 | PB | PE | 回撤 | 振幅 | 粘合 | 评分 |\n")
+        f.write(f"|---|-----|------|------|-----|----|----|------|------|------|------|\n")
+        for i, r in enumerate(results, 1):
+            pool = 'Core' if r['symbol'] in core_set else 'Radar'
+            f.write(f"| {i} | {pool} | {r['code']} | {r['name']} | "
+                    f"{r.get('price', 0):.2f} | {r.get('pb') or 0:.2f} | {r.get('pe') or 0:.1f} | "
+                    f"{r.get('drawdown', 0):.0f}% | {r.get('amplitude', 0):.0f}% | "
+                    f"{r.get('ma_div', 0):.2f} | **{r['total_score']:.1f}** |\n")
 
         # 风险提示
         f.write("---\n\n")
@@ -167,10 +188,10 @@ if __name__ == '__main__':
     print("=" * 55)
 
     print("\n正在运行筛选器...")
-    results = run_screener(top_n=10)
+    results = run_screener(top_n=999)
     print(f"\n筛选完成，共 {len(results)} 只股票")
 
     print("\n正在生成报告...")
-    paths = generate_report(results)
+    paths = generate_report(results, top_n=10)
     print(f"\n✓ JSON 报告: {paths['json_path']}")
     print(f"✓ Markdown 报告: {paths['md_path']}")

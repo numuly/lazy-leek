@@ -26,24 +26,26 @@ from modules.pool_manager import (
 
 
 def daily_run(args):
-    """日常筛选：Core + Radar 池 → 评分 → 生成报告"""
+    """日常筛选：Core + Radar 池全量评分 → 报告"""
     print("=" * 60)
     print("  A股低估值筛选系统")
     print("=" * 60)
 
-    print("\n[1/2] 运行筛选器...")
-    results = run_screener(top_n=args.top, months=args.months)
-    print(f"  → 筛选出 {len(results)} 只股票")
-    record_scores(results)
+    print("\n[1/2] 全量评分...")
+    all_results = run_screener(top_n=999, months=args.months)
+    print(f"  → 评分 {len(all_results)} 只股票")
+    record_scores(all_results)
     clean_stale_history()
 
+    core_symbols = {s['symbol'] for s in load_pool('core')}
+
     print("\n[2/2] 生成报告...")
-    paths = generate_report(results, skip_history=args.no_history, months=args.months)
+    paths = generate_report(all_results, top_n=args.top, core_symbols=core_symbols,
+                             skip_history=args.no_history, months=args.months)
     print(f"  → JSON: {paths['json_path']}")
     print(f"  → Markdown: {paths['md_path']}")
 
     print("\nOK")
-    return results
 
 
 def maintain_pools(args):
